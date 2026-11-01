@@ -1,10 +1,10 @@
 # Automated Cloud-Init Server Provisioning
 
-This project provisions an automated Ubuntu 24.04 server locally using cloud-init and QEMU with zero manual intervention.
+This project provisions an automated Ubuntu 24.04 server locally using `cloud-init` and `QEMU` with zero manual intervention.
 
 ## Prerequisites
-- QEMU (qemu-system-x86_64)
-- Cloud Image Utilities (cloud-localds)
+- QEMU (`qemu-system-x86_64`)
+- Cloud Image Utilities (`cloud-localds`)
 - KVM / Hardware Virtualization enabled
 
 ## How to Run
@@ -15,7 +15,7 @@ This project provisions an automated Ubuntu 24.04 server locally using cloud-ini
 Download and resize the base Ubuntu 24.04 Cloud Image:
 
 Bash
-wget -O noble-server.img [https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img](https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img)
+wget -O noble-server.img https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img
 qemu-img resize noble-server.img 10G
 Launch the virtual machine:
 
@@ -29,7 +29,7 @@ Verification
 Wait approximately 60–90 seconds for initial provisioning to complete. Test the HTTP service from the host machine:
 
 Bash
-curl [http://127.0.0.1:8080](http://127.0.0.1:8080)
+curl http://127.0.0.1:8080
 Expected output:
 
 Plaintext
