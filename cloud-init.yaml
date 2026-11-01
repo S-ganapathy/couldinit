@@ -1,0 +1,99 @@
+#cloud-config
+
+package_update: true
+package_upgrade: false
+
+ssh_pwauth: true
+
+packages:
+  - curl
+  - git
+  - ffmpeg
+  - docker.io
+
+groups:
+  - docker
+
+users:
+  - default
+  - name: appuser
+    gecos: Application Service User
+    primary_group: appuser
+    groups: [docker, sudo]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: false
+    plain_text_passwd: 'password123'
+    ssh_authorized_keys:
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJJAb8TwsomDLSG4tN9zbYrDCj+6FbYVhRw8obltItab ubuntu@DESKTOP-UGH8BL3
+
+bootcmd:
+  - mkdir -p /opt/app
+
+write_files:
+  - path: /opt/app/app.env
+    owner: root:root
+    permissions: '0640'
+    content: |
+      PORT=8080
+      APP_ENV=production
+      APP_NAME=generic-service
+      GREETING_MESSAGE="Hello from Server!"
+
+  - path: /opt/app/server.py
+    owner: root:root
+    permissions: '0644'
+    content: |
+      import os
+      from http.server import HTTPServer, BaseHTTPRequestHandler
+
+      port = int(os.environ.get("PORT", 8080))
+      msg = os.environ.get("GREETING_MESSAGE", "Hello from Server!\n")
+
+      class SimpleHandler(BaseHTTPRequestHandler):
+          def do_GET(self):
+              self.send_response(200)
+              self.send_header("Content-Type", "text/plain; charset=utf-8")
+              self.end_headers()
+              response = msg if msg.endswith("\n") else msg + "\n"
+              self.wfile.write(response.encode("utf-8"))
+
+          def log_message(self, format, *args):
+              pass
+
+      server = HTTPServer(("0.0.0.0", port), SimpleHandler)
+      server.serve_forever()
+
+  - path: /etc/systemd/system/app.service
+    owner: root:root
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Generic Dockerized HTTP Service
+      After=docker.service
+      Requires=docker.service
+
+      [Service]
+      Type=simple
+      Restart=always
+      RestartSec=3s
+      ExecStartPre=-/usr/bin/docker stop web-app
+      ExecStartPre=-/usr/bin/docker rm web-app
+      ExecStart=/usr/bin/docker run --name web-app \
+        --rm \
+        --env-file /opt/app/app.env \
+        -v /opt/app/server.py:/app/server.py:ro \
+        -p 8080:8080 \
+        python:3.12-alpine \
+        python3 /app/server.py
+      ExecStop=/usr/bin/docker stop -t 2 web-app
+
+      [Install]
+      WantedBy=multi-user.target
+
+runcmd:
+  - chown -R appuser:appuser /opt/app
+  - chmod 750 /opt/app
+  - systemctl daemon-reload
+  - systemctl enable --now docker
+  - systemctl enable --now app.service
